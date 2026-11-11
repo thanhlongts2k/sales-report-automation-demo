@@ -36,7 +36,7 @@ Chạy `python main.py` sẽ ra:
 |---|---|
 | `output/bao-cao-2026-11-11.xlsx` | 4 sheet: TongHop, TheoSanPham, TheoKhuVuc, NhacNo |
 | `output/tom-tat.md` | Tóm tắt doanh thu + nợ quá hạn để đọc nhanh |
-| `output/dashboard.html` | Dashboard tĩnh, mở bằng trình duyệt là xem được |
+| `output/dashboard.html` | Dashboard 1 file duy nhất (CSS + JS nhúng sẵn, không cần mạng): thẻ KPI, biểu đồ thanh theo sản phẩm / khu vực, bảng bấm tiêu đề để sắp xếp, ô tìm kiếm + nút lọc nhắc nợ theo mức độ (Nhắc / Gấp / Rất gấp). Mở bằng trình duyệt là xem được, chụp màn hình gửi khách được ngay |
 | `output/emails/NN-*.txt` | Nháp mail nhắc nợ cho từng khách quá hạn — **chỉ là file nháp, không gửi mail thật** |
 | `output/sent_log.csv` | Nhật ký chống gửi trùng: cùng ngày, cùng khách chỉ tạo nháp 1 lần |
 

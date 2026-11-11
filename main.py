@@ -14,7 +14,9 @@ Chay:  python main.py [--ngay 2026-11-11] [--gui-that]
 Dau ra (thu muc output/):
   bao-cao-YYYY-MM-DD.xlsx : TongHop, TheoSanPham, TheoKhuVuc, NhacNo
   tom-tat.md               : ban tom tat de doc nhanh / chup man hinh
-  dashboard.html           : bang dashboard don gian, mo bang trinh duyet
+  dashboard.html           : dashboard 1 file (CSS + JS nhung san, khong
+    can mang): the KPI, bieu do thanh, bang sap xep duoc, tim kiem
+    va loc nhac no theo muc do; mo bang trinh duyet la xem duoc
   emails/NN-<ten>.txt      : nhap mail nhac no cho tung khach (khong gui)
   sent_log.csv             : nhat ky chong gui trung — cung ngay, cung
     khach thi chi tao nhap 1 lan, lan 2 se ghi "da_tao_nhap" thay vi
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import html
 import sys
 from datetime import date
 from pathlib import Path
@@ -120,24 +123,183 @@ def viet_nhap_email(ngay: date, khach: str, khoan: pd.DataFrame) -> Path:
 
 def viet_dashboard(ngay: date, th: dict, theo_sp: pd.DataFrame,
                    theo_kv: pd.DataFrame, qua_han: pd.DataFrame) -> Path:
-    def bang_html(df: pd.DataFrame) -> str:
-        return df.to_html(index=False, border=1)
+    """Viet dashboard.html — 1 file duy nhat, CSS + JS nhung san ben trong.
 
-    html = f"""<!doctype html><html lang="vi"><head><meta charset="utf-8">
-<title>Dashboard ban hang — {ngay.isoformat()} (du lieu gia)</title></head>
-<body><h1>Dashboard ban hang — {ngay.isoformat()}</h1>
-<p>{CONG_TY_GIA}</p>
-<p>Tong don: <b>{th['tong_don']}</b> — Doanh thu: <b>{th['tong_doanh_thu']:,} VND</b>
-— Don trung binh: <b>{th['don_trung_binh']:,} VND</b>
-— San pham ban chay: <b>{th['san_pham_ban_chay']}</b></p>
-<p>Khoan no qua han: <b>{len(qua_han)}</b> khoan,
-tong <b>{int(qua_han['so_tien'].sum()) if len(qua_han) else 0:,} VND</b></p>
-<h2>Theo san pham</h2>{bang_html(theo_sp)}
-<h2>Theo khu vuc</h2>{bang_html(theo_kv)}
-<h2>No qua han</h2>{bang_html(qua_han) if len(qua_han) else '<p>Khong co khoan qua han.</p>'}
+    Khong dung CDN hay thu vien ngoai, mo bang trinh duyet la xem duoc
+    ngay ca khi khong co mang. JS chi lam 2 viec nho: tim kiem trong
+    bang no qua han, va sap xep bang khi bam vao tieu de cot.
+    """
+    tong_no = int(qua_han["so_tien"].sum()) if len(qua_han) else 0
+
+    def hang_thanh(label: str, gia_tri: str, ty_le: float,
+                   mau: str = "#2563eb") -> str:
+        ty_le = max(2.0, min(100.0, ty_le))
+        return (
+            f'<div class="bar-row"><span class="bar-label">'
+            f"{html.escape(label)}</span>"
+            f'<div class="bar-track"><div class="bar-fill" style="width:{ty_le:.1f}%;'
+            f'background:{mau}"></div></div>'
+            f'<span class="bar-value">{html.escape(gia_tri)}</span></div>'
+        )
+
+    def bieu_do(df: pd.DataFrame, cot_nhan: str, cot_tien: str) -> str:
+        lon_nhat = float(df[cot_tien].max()) if len(df) else 1.0
+        mau = ["#2563eb", "#0891b2", "#059669", "#d97706", "#dc2626"]
+        hang = "".join(
+            hang_thanh(str(getattr(r, cot_nhan)),
+                       f"{int(getattr(r, cot_tien)):,} VND",
+                       float(getattr(r, cot_tien)) / lon_nhat * 100,
+                       mau[i % len(mau)])
+            for i, r in enumerate(df.itertuples())
+        )
+        return f'<div class="bars">{hang}</div>'
+
+    def bang(df: pd.DataFrame, id_bang: str, dinh_dang_tien: set | None = None) -> str:
+        dinh_dang_tien = dinh_dang_tien or set()
+        tieu_de = "".join(
+            f"<th data-kieu=\"{'so' if df[c].dtype.kind in 'iuf' else 'chu'}\">"
+            f"{html.escape(str(c))}</th>" for c in df.columns
+        )
+        dong = ""
+        for r in df.itertuples(index=False):
+            o = "".join(
+                f"<td>{int(v):,} VND</td>" if c in dinh_dang_tien
+                else f"<td>{html.escape(str(v))}</td>"
+                for c, v in zip(df.columns, r)
+            )
+            dong += f"<tr>{o}</tr>"
+        return (f'<table id="{id_bang}" class="bang"><thead><tr>{tieu_de}'
+                f"</tr></thead><tbody>{dong}</tbody></table>")
+
+    def muc_do(ngay_qua: int) -> tuple[str, str]:
+        if ngay_qua > 20:
+            return "rat-gap", "Rất gấp"
+        if ngay_qua >= 10:
+            return "gap", "Gấp"
+        return "nhac", "Nhắc"
+
+    hang_no = ""
+    for r in qua_han.itertuples():
+        lop, nhan = muc_do(int(r.so_ngay_qua_han))
+        hang_no += (
+            f'<tr data-khach="{html.escape(str(r.khach_hang).lower())}" '
+            f'data-muc="{lop}"><td>{html.escape(str(r.ma_cong_no))}</td>'
+            f"<td>{html.escape(str(r.khach_hang))}</td>"
+            f"<td>{int(r.so_tien):,} VND</td>"
+            f"<td>{html.escape(str(r.han_thanh_toan))}</td>"
+            f"<td>{int(r.so_ngay_qua_han)} ngày</td>"
+            f'<td><span class="badge {lop}">{nhan}</span></td></tr>'
+        )
+    bang_no = (
+        '<table id="bang-no" class="bang"><thead><tr>'
+        "<th>Mã</th><th>Khách hàng</th><th>Số tiền</th>"
+        "<th>Hạn thanh toán</th><th>Quá hạn</th><th>Mức độ</th>"
+        "</tr></thead><tbody>" + hang_no + "</tbody></table>"
+        if hang_no else "<p class='trong'>Không có khoản quá hạn. 🎉</p>"
+    )
+
+    css = """
+:root{--xanh:#2563eb;--do:#dc2626;--xam:#64748b;--nen:#f1f5f9;--vien:#e2e8f0}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--nen);color:#0f172a}
+header{background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;padding:28px 24px}
+header .wrap,main{max-width:1020px;margin:0 auto}
+header h1{margin:0 0 6px;font-size:26px}
+header p{margin:4px 0;color:#dbeafe}
+.badge-gia{display:inline-block;background:#facc15;color:#422006;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+main{padding:20px 16px 40px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0 24px}
+.kpi{background:#fff;border:1px solid var(--vien);border-radius:14px;padding:16px}
+.kpi .nhan{font-size:13px;color:var(--xam)}
+.kpi .so{font-size:24px;font-weight:800;margin-top:4px}
+.kpi .phu{font-size:13px;color:var(--xam);margin-top:2px}
+.kpi.do .so{color:var(--do)}
+section{background:#fff;border:1px solid var(--vien);border-radius:14px;padding:18px;margin-bottom:18px}
+section h2{margin:0 0 4px;font-size:18px}
+section .mo-ta{color:var(--xam);font-size:13px;margin:0 0 14px}
+.bar-row{display:grid;grid-template-columns:150px 1fr 130px;gap:10px;align-items:center;padding:7px 0}
+.bar-label{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{background:#e2e8f0;border-radius:999px;height:12px;overflow:hidden}
+.bar-fill{height:100%;border-radius:999px}
+.bar-value{text-align:right;font-size:13px;font-weight:600}
+.bang{width:100%;border-collapse:collapse;font-size:14px}
+.bang th,.bang td{padding:9px 10px;border-bottom:1px solid var(--vien);text-align:left}
+.bang thead th{background:#f8fafc;cursor:pointer;white-space:nowrap}
+.bang tbody tr:hover{background:#eff6ff}
+.bang td:last-child,.bang th:last-child{text-align:right}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.badge.rat-gap{background:#fee2e2;color:#991b1b}
+.badge.gap{background:#fef3c7;color:#92400e}
+.badge.nhac{background:#dbeafe;color:#1e40af}
+.trong{color:var(--xam)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.toolbar input{flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--vien);border-radius:10px;font-size:14px}
+.nut{padding:9px 14px;border:1px solid var(--vien);background:#fff;border-radius:10px;cursor:pointer;font-size:14px}
+.nut.chon{background:#2563eb;color:#fff;border-color:#2563eb}
+footer{color:var(--xam);font-size:13px;text-align:center;padding-bottom:20px}
+@media(max-width:640px){.bar-row{grid-template-columns:110px 1fr 90px}.kpi .so{font-size:20px}}
+"""
+    js = """
+function locNo(){
+  var tu=document.getElementById('tim-no').value.toLowerCase();
+  var muc=document.querySelector('.nut.chon').dataset.muc;
+  document.querySelectorAll('#bang-no tbody tr').forEach(function(r){
+    var hopTu=!tu||r.dataset.khach.indexOf(tu)>-1||r.textContent.toLowerCase().indexOf(tu)>-1;
+    var hopMuc=muc==='tat-ca'||r.dataset.muc===muc;
+    r.style.display=(hopTu&&hopMuc)?'':'none';
+  });
+}
+document.querySelectorAll('.nut').forEach(function(n){
+  n.addEventListener('click',function(){
+    document.querySelectorAll('.nut').forEach(function(x){x.classList.remove('chon')});
+    n.classList.add('chon');locNo();
+  });
+});
+document.querySelectorAll('.bang thead th').forEach(function(th,i){
+  th.addEventListener('click',function(){
+    var bang=th.closest('table'),tb=bang.tBodies[0];
+    var hang=Array.from(tb.rows),tang=bang.dataset.tang!=='1';
+    bang.dataset.tang=tang?'1':'0';
+    hang.sort(function(a,b){
+      var x=a.cells[i].textContent.trim(),y=b.cells[i].textContent.trim();
+      var sx=parseFloat(x.replace(/[^0-9.-]/g,'')),sy=parseFloat(y.replace(/[^0-9.-]/g,''));
+      if(!isNaN(sx)&&!isNaN(sy))return tang?sx-sy:sy-sx;
+      return tang?x.localeCompare(y,'vi'):y.localeCompare(x,'vi');
+    });
+    hang.forEach(function(r){tb.appendChild(r)});
+  });
+});
+"""
+    noi_dung = f"""<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard bán hàng — {ngay.isoformat()} (dữ liệu giả)</title>
+<style>{css}</style></head>
+<body><header><div class="wrap">
+<h1>📊 Dashboard bán hàng — {ngay.isoformat()}</h1>
+<p>{html.escape(CONG_TY_GIA)}</p>
+<p><span class="badge-gia">DỮ LIỆU GIẢ 100% — DEMO PORTFOLIO</span></p>
+</div></header>
+<main>
+<div class="kpis">
+<div class="kpi"><div class="nhan">Doanh thu</div><div class="so">{th['tong_doanh_thu']:,} VND</div><div class="phu">{th['tong_don']} đơn hàng</div></div>
+<div class="kpi"><div class="nhan">Đơn trung bình</div><div class="so">{th['don_trung_binh']:,} VND</div><div class="phu">Sản phẩm bán chạy: {html.escape(str(th['san_pham_ban_chay']))}</div></div>
+<div class="kpi do"><div class="nhan">Nợ quá hạn</div><div class="so">{len(qua_han)} khoản</div><div class="phu">Tổng {tong_no:,} VND — cần nhắc ngay</div></div>
+</div>
+<section><h2>Doanh thu theo sản phẩm</h2><p class="mo-ta">Bấm vào tiêu đề bảng để sắp xếp. Thanh dài hơn nghĩa là doanh thu cao hơn.</p>{bieu_do(theo_sp, 'san_pham', 'doanh_thu')}{bang(theo_sp, 'bang-sp', {'doanh_thu'})}</section>
+<section><h2>Doanh thu theo khu vực</h2><p class="mo-ta">Khu vực nào bán mạnh, khu vực nào còn yếu — nhìn thanh là thấy.</p>{bieu_do(theo_kv, 'khu_vuc', 'doanh_thu')}{bang(theo_kv, 'bang-kv', {'doanh_thu'})}</section>
+<section><h2>Nhắc nợ quá hạn</h2><p class="mo-ta">Gõ tên khách để tìm nhanh, bấm nút để lọc theo mức độ. Mức độ tính theo số ngày quá hạn: dưới 10 ngày thì nhắc, 10–20 ngày thì gấp, trên 20 ngày thì rất gấp.</p>
+<div class="toolbar"><input id="tim-no" type="search" placeholder="Tìm khách hàng, mã công nợ…" oninput="locNo()">
+<button class="nut chon" data-muc="tat-ca">Tất cả</button>
+<button class="nut" data-muc="rat-gap">Rất gấp</button>
+<button class="nut" data-muc="gap">Gấp</button>
+<button class="nut" data-muc="nhac">Nhắc</button></div>
+{bang_no}</section>
+</main>
+<footer>Dashboard tự sinh bởi <code>python main.py</code> — dữ liệu giả, chỉ dùng để demo.</footer>
+<script>{js}</script>
 </body></html>"""
     p = OUT_DIR / "dashboard.html"
-    p.write_text(html, encoding="utf-8")
+    p.write_text(noi_dung, encoding="utf-8")
     return p
 
 
