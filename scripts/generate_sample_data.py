@@ -1,7 +1,8 @@
 """Tao du lieu MAU (gia) cho demo automation.
 
-Moi ten cong ty, ten khach hang, so tien trong file nay deu la BIA RA
-de demo — khong phai du lieu that cua bat ky cong ty hay khach hang nao.
+Moi ten cong ty, ten khach hang, so tien trong file nay deu la
+du lieu gia lap - thong tin khach hang deu duoc bao mat; khong phai
+du lieu that cua bat ky cong ty hay khach hang nao.
 Chay:  python scripts/generate_sample_data.py
 Ghi ra: data/sample_sales.xlsx  (2 sheet: DonHang, CongNo)
 """
@@ -91,7 +92,7 @@ def main() -> None:
     with pd.ExcelWriter(OUT, engine="openpyxl") as w:
         tao_don_hang().to_excel(w, sheet_name="DonHang", index=False)
         tao_cong_no().to_excel(w, sheet_name="CongNo", index=False)
-    print(f"Da tao {OUT} (60 don hang, 12 khoan cong no — DU LIEU GIA)")
+    print(f"Da tao {OUT} (60 don hang, 12 khoan cong no — dữ liệu giả lập - thông tin khách hàng đều được bảo mật)")
 
 
 if __name__ == "__main__":

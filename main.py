@@ -1,4 +1,4 @@
-"""Demo: tu dong bao cao ban hang + nhac no qua email (DU LIEU GIA).
+"""Demo: tu dong bao cao ban hang + nhac no qua email (du lieu gia lap).
 
 Day la project PORTFOLIO cua Louis — viet moi tu dau, chi dung du lieu gia
 trong data/sample_sales.xlsx. Khong dung code, du lieu hay anh chup cua
@@ -39,7 +39,7 @@ OUT_DIR = ROOT / "output"
 EMAIL_DIR = OUT_DIR / "emails"
 LOG_FILE = OUT_DIR / "sent_log.csv"
 
-CONG_TY_GIA = "Cong ty TNHH An Phuc (DU LIEU GIA — moi so lieu deu la bia ra)"
+CONG_TY_GIA = "Cong ty TNHH An Phuc (dữ liệu giả lập - thông tin khách hàng đều được bảo mật)"
 
 
 def doc_du_lieu() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -272,12 +272,12 @@ document.querySelectorAll('.bang thead th').forEach(function(th,i){
 """
     noi_dung = f"""<!doctype html><html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard bán hàng — {ngay.isoformat()} (dữ liệu giả)</title>
+<title>Dashboard bán hàng — {ngay.isoformat()} (dữ liệu giả lập)</title>
 <style>{css}</style></head>
 <body><header><div class="wrap">
 <h1>📊 Dashboard bán hàng — {ngay.isoformat()}</h1>
 <p>{html.escape(CONG_TY_GIA)}</p>
-<p><span class="badge-gia">DỮ LIỆU GIẢ 100% — DEMO PORTFOLIO</span></p>
+<p><span class="badge-gia">Dữ liệu giả lập - thông tin khách hàng đều được bảo mật</span></p>
 </div></header>
 <main>
 <div class="kpis">
@@ -295,7 +295,7 @@ document.querySelectorAll('.bang thead th').forEach(function(th,i){
 <button class="nut" data-muc="nhac">Nhắc</button></div>
 {bang_no}</section>
 </main>
-<footer>Dashboard tự sinh bởi <code>python main.py</code> — dữ liệu giả, chỉ dùng để demo.</footer>
+<footer>Dashboard tự sinh bởi <code>python main.py</code> — dữ liệu giả lập - thông tin khách hàng đều được bảo mật.</footer>
 <script>{js}</script>
 </body></html>"""
     p = OUT_DIR / "dashboard.html"
@@ -348,7 +348,7 @@ def main() -> None:
 
     # 3. Tom tat + dashboard
     tom_tat = (
-        f"# Tom tat bao cao — {ngay.isoformat()} (DU LIEU GIA)\n\n"
+        f"# Tom tat bao cao — {ngay.isoformat()} (dữ liệu giả lập - thông tin khách hàng đều được bảo mật)\n\n"
         f"- Tong don: {th['tong_don']}\n"
         f"- Doanh thu: {th['tong_doanh_thu']:,} VND\n"
         f"- Don trung binh: {th['don_trung_binh']:,} VND\n"

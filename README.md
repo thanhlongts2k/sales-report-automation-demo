@@ -1,8 +1,7 @@
 # Demo: Tự động báo cáo bán hàng + nhắc nợ
 
-> **Dữ liệu giả 100%.** Mọi tên công ty, tên khách hàng và số tiền trong
-> repo này đều là bịa ra để demo. Không dùng code, dữ liệu hay ảnh chụp
-> của bất kỳ công ty hay khách hàng thật nào.
+> dữ liệu giả lập - thông tin khách hàng đều được bảo mật. Không dùng code,
+> dữ liệu hay ảnh chụp của bất kỳ công ty hay khách hàng thật nào.
 
 Repo này là portfolio của Louis (Python dev) — minh họa đúng việc anh làm
 cho khách doanh nghiệp vừa và nhỏ: thay vì mỗi sáng kế toán mở file Excel,
